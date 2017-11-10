@@ -7,6 +7,7 @@ int main(int c, char* argv[])
 
     // TODO: PARSE THE CONFIG FILE FOR CONNECTIONS
 
+    // Primary loop for command line interface
     for (;;) {
         // Local Vars
         char inp_buffer[MAX_BUF_LEN];
@@ -20,6 +21,7 @@ int main(int c, char* argv[])
         cmd = strtok(inp_buffer, " ");
         filename = strtok(NULL, "\n");
 
+        // Check if command is one of commands and call applicable routine
         if (strcmp(cmd, "get") == 0) {
             printf("GET implementation missing\n");
         }
@@ -28,6 +30,9 @@ int main(int c, char* argv[])
         }
         else if (strcmp(cmd, "list") == 0) {
             printf("LIST implementation missing\n");
+        }
+        else if (strcmp(cmd, "exit") == 0) {
+            break;
         }
         else {
             printf("Command not recognized: %s\n", cmd);
