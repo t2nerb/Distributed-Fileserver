@@ -3,8 +3,9 @@
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2) {
-        printf("Usage: ./server DFS<num> port");
+    if (argc < 2) {
+        printf("Usage: ./server DFS<num> port\n");
+        exit(-1);
     }
 
     // Local Vars
