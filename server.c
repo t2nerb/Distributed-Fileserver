@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     client_len = sizeof(struct sockaddr_in);
 
     // Read in configuration file to struct
+    config_parse(&config_data);
 
     // Bind the socket and listen on specified port
     sockfd = config_socket(config_data);
@@ -57,6 +58,40 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+
+// Parse the ws.conf file and store the data into a struct
+void config_parse(struct ConfigData *config_data)
+{
+    // Local vars
+    char conf_line[MAX_BUF_LEN];
+    FILE *config_file;
+
+    config_file = fopen("./dfs.conf", "r");
+    if (!config_file) {
+        perror("Could not find ./dfs.conf");
+        exit(-1);
+    }
+
+    // Loop through file and store relevant information into struct
+    int counter = 0;
+    while (fgets(conf_line, MAX_BUF_LEN, config_file))
+    {
+        // Local Vars
+
+        // Don't parse comments
+        if (conf_line[0] != '#') {
+            config_data->users[counter] = strtok(conf_line, " ");
+            config_data->passwords[counter] = strtok(NULL, "\n");
+            printf("Username: %s\nPassword: %s\n", config_data->users[counter], config_data->passwords[counter]);
+            counter++;
+        }
+
+    }
+    fclose(config_file);
+
+}
+
+
 // Bind to socket and listen on port
 int config_socket(struct ConfigData config_data)
 {
@@ -94,57 +129,4 @@ int config_socket(struct ConfigData config_data)
     }
 
     return sockfd;
-}
-
-// Parse the ws.conf file and store the data into a struct
-void config_parse(struct ConfigData *config_data)
-{
-    // Local vars
-    char conf_line[MAX_FIELD_LEN];
-    FILE *config_file;
-
-    config_file = fopen("./dfs.conf", "r");
-    if (!config_file) {
-        perror("Could not find ./ws.conf");
-        exit(-1);
-    }
-
-    // Loop through file and store relevant information into struct
-    int counter = 0, fcounter = 0;
-    while (fgets(conf_line, MAX_FIELD_LEN, config_file))
-    {
-        // Local Vars
-        char *saveptr;
-        char *firstptr;
-
-        // Don't parse comments
-        if (conf_line[0] != '#') {
-            // if (counter == 0) {
-            //     strtok_r(conf_line, " ", &saveptr);
-            //     config_data->port = atoi(saveptr);
-            // }
-            // else if (counter == 1) {
-            //     strtok_r(conf_line, " ", &saveptr);
-            //     remove_elt(saveptr, "\"");
-            //     remove_elt(saveptr, "\n");
-            //     strcpy(config_data->root_dir, saveptr);
-            // }
-            // else if (counter == 2) {
-            //     strtok_r(conf_line, " ", &saveptr);
-            //     remove_elt(saveptr, "\n");
-            //     strcpy(config_data->default_page, saveptr);
-            // }
-            // else {
-            //     firstptr = strtok_r(conf_line, " ", &saveptr);
-            //     strcpy(config_data->extensions[fcounter], firstptr);
-            //     remove_elt(saveptr, "\n");
-            //     strcpy(config_data->http_enc[fcounter], saveptr);
-            //     fcounter++;
-            // }
-            counter++;
-        }
-
-    }
-    fclose(config_file);
-
 }

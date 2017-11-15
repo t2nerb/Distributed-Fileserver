@@ -9,14 +9,13 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#define MAX_FIELD_LEN 128
+#define MAX_BUF_LEN 128
 #define MAX_USERS 32
 
 struct ConfigData {
     int port;
-    char name[MAX_FIELD_LEN];
-    char users[MAX_USERS][MAX_FIELD_LEN];
-    char passwords[MAX_USERS][MAX_FIELD_LEN];
+    char* users[MAX_USERS];
+    char* passwords[MAX_USERS];
 };
 
 int config_socket(struct ConfigData config_data);

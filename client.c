@@ -4,8 +4,10 @@ int main(int c, char* argv[])
 {
     // Local Vars
     char* prmpt = "Fileserver> ";
+    struct ConfigData config_data;
 
     // TODO: PARSE THE CONFIG FILE FOR CONNECTIONS
+    config_parse(&config_data);
 
     // Primary loop for command line interface
     for (;;) {
@@ -43,8 +45,51 @@ int main(int c, char* argv[])
     return 0;
 }
 
+void config_parse(struct ConfigData* config_data)
+{
+    // Local Vars
+    char conf_line[MAX_BUF_LEN];
+    FILE *config_file;
 
-static int getLine (char *prmpt, char *buff, size_t sz) {
+    config_file = fopen("./dfc.conf", "r");
+    if (!config_file) {
+        perror("Could not find ./dfc.conf");
+        exit(-1);
+    }
+
+    // Loop through file and store relevant information into struct
+    int server_ctr = 0;
+    while (fgets(conf_line, MAX_BUF_LEN, config_file))
+    {
+        // Local Vars
+        char* line_type;
+
+        // Don't parse comments
+        if (conf_line[0] != '#' && conf_line[0] != ' ') {
+            line_type = strtok(conf_line, " ");
+
+            if (strcmp(line_type, "Server") == 0) {
+                config_data->serv_name[server_ctr] = strtok(NULL, " ");
+                config_data->serv_addr[server_ctr] = strtok(NULL, "\n");
+
+                server_ctr++;
+            }
+            else if (strcmp(line_type, "Username:") == 0) {
+                config_data->name = strtok(NULL, "\n");
+            }
+            else if (strcmp(line_type, "Password:") == 0) {
+                config_data->password = strtok(NULL, "\n");
+            }
+
+        }
+
+    }
+    fclose(config_file);
+}
+
+
+static int getLine (char *prmpt, char *buff, size_t sz)
+{
     int ch, extra;
 
     if (prmpt != NULL) {
