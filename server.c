@@ -19,8 +19,7 @@ int main(int argc, char* argv[])
 
     // Read in configuration file to struct
     config_parse(&config_data);
-    printf("work_dir: %s\n", config_data.work_dir);
-    printf("port: %d\n", config_data.port);
+
     // Bind the socket and listen on specified port
     sockfd = config_socket(config_data);
 
@@ -136,18 +135,40 @@ int config_socket(struct ConfigData config_data)
 void child_handler(int client, struct ConfigData* config_data)
 {
     // Local Vars
-    int data_len;
-    char data[10];
 
-    // TODO: Authenticate username and password from client 
-    data_len = recv(client, data, 10, 0);
+
+    // TODO: Authenticate username and password from client
+    validate_credentials(client, config_data);
+
+    printf("Uh oh\n");
+
+}
+
+void validate_credentials(int client, struct ConfigData *config_data)
+{
+    // Local Vars
+    int data_len;
+    char userpass[24];
+    char *username, *password;
+
+    data_len = recv(client, userpass, sizeof(userpass), 0);
     if (data_len < 0) {
         perror("Recv: ");
         exit(-1);
     }
-    else {
-        printf("%s\n", data);
+
+    // Parse username and password from userpass
+    username = strtok(userpass, " ");
+    password = strtok(NULL, "\n");
+
+    // Check if username name exists AND matches password
+    for (int i = 0; i < MAX_USERS; i++) {
+        if ((strcmp(username, config_data->users[i]) == 0) && (strcmp(password, config_data->passwords[i]) == 0)) {
+            printf("Fuck yeah\n");
+            return;
+        }
     }
 
-    send(client, "serversayhi", 10, 0);
+    exit(-1);
+
 }

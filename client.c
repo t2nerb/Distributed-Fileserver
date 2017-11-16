@@ -51,23 +51,38 @@ void get_routine(char* inp_buffer, struct ConfigData* config_data)
 {
     // Local Vars
     int sockfd;
-    int data_len;
-    char msg[10];
+    int conn_status;
 
     // Get socket file descriptor
     sockfd = create_socket(0, config_data);
 
     // TODO: Authenticate username and password with server
-    write(sockfd, "hello", 10);
+    conn_status = handshake(sockfd, config_data);
 
-    data_len = read(sockfd, msg, 10);
-    if (data_len < 0) {
-        printf("Error receiving\n");
-    }
-    else {
-        printf("%s\n", msg);
-    }
+}
 
+// Send username and password to server
+// If handshake returns -1, then invalid credentials
+int handshake(int server, struct ConfigData *config_data)
+{
+    // Local Vars
+    // int data_len;
+    char userpass[24];
+
+    // Create username and password pair from config_data
+    strcpy(userpass, config_data->name);
+    strcat(userpass, " ");
+    strcat(userpass, config_data->password);
+    strcat(userpass, "\n");
+
+    // Send the user password pair
+    send(server, userpass, sizeof(userpass), 0);
+
+    // TODO: Wait 1 second for response from server
+    // If no response, return with error
+
+
+    return 0;
 }
 
 int create_socket(int server_num, struct ConfigData *config_data)
@@ -90,9 +105,6 @@ int create_socket(int server_num, struct ConfigData *config_data)
     // Try to connect
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
         printf("Connection could not be made\n");
-    }
-    else {
-        printf("Connected to port: %d\n", port_number);
     }
 
     return sock;
