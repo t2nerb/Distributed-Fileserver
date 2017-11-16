@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2) {
+    if (argc < 3) {
         printf("Usage: ./server DFS<num> port\n");
         exit(-1);
     }
@@ -13,12 +13,14 @@ int main(int argc, char* argv[])
     unsigned int client_len;
     struct sockaddr_in client;
     struct ConfigData config_data;
-    config_data.port = atoi(argv[1]);
+    config_data.work_dir = argv[1];
+    config_data.port = atoi(argv[2]);
     client_len = sizeof(struct sockaddr_in);
 
     // Read in configuration file to struct
     config_parse(&config_data);
-
+    printf("work_dir: %s\n", config_data.work_dir);
+    printf("port: %d\n", config_data.port);
     // Bind the socket and listen on specified port
     sockfd = config_socket(config_data);
 
@@ -44,7 +46,8 @@ int main(int argc, char* argv[])
         // I am the child
         if (pid == 0) {
             close(sockfd);
-            // Call child handler here
+            child_handler(clientfd, &config_data);
+            exit(0);
         }
 
         // I am the parent
@@ -59,7 +62,7 @@ int main(int argc, char* argv[])
 }
 
 
-// Parse the ws.conf file and store the data into a struct
+// Parse the dfs.conf file and store the data into a struct
 void config_parse(struct ConfigData *config_data)
 {
     // Local vars
@@ -80,9 +83,8 @@ void config_parse(struct ConfigData *config_data)
 
         // Don't parse comments
         if (conf_line[0] != '#') {
-            config_data->users[counter] = strtok(conf_line, " ");
-            config_data->passwords[counter] = strtok(NULL, "\n");
-            printf("Username: %s\nPassword: %s\n", config_data->users[counter], config_data->passwords[counter]);
+            config_data->users[counter] = strdup(strtok(conf_line, " "));
+            config_data->passwords[counter] = strdup(strtok(NULL, "\n"));
             counter++;
         }
 
@@ -129,4 +131,23 @@ int config_socket(struct ConfigData config_data)
     }
 
     return sockfd;
+}
+
+void child_handler(int client, struct ConfigData* config_data)
+{
+    // Local Vars
+    int data_len;
+    char data[10];
+
+    // TODO: Authenticate username and password from client 
+    data_len = recv(client, data, 10, 0);
+    if (data_len < 0) {
+        perror("Recv: ");
+        exit(-1);
+    }
+    else {
+        printf("%s\n", data);
+    }
+
+    send(client, "serversayhi", 10, 0);
 }

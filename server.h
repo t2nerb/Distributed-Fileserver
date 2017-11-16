@@ -14,9 +14,11 @@
 
 struct ConfigData {
     int port;
+    char* work_dir;
     char* users[MAX_USERS];
     char* passwords[MAX_USERS];
 };
 
 int config_socket(struct ConfigData config_data);
 void config_parse(struct ConfigData *config_data);
+void child_handler(int client, struct ConfigData* config_data);
