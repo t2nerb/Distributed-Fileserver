@@ -62,12 +62,15 @@ void get_routine(char* inp_buffer, struct ConfigData* config_data)
 }
 
 // Send username and password to server
-// If handshake returns -1, then invalid credentials
+// return 0: Invalid credentials
+// return 1: Valid credentials
 int handshake(int server, struct ConfigData *config_data)
 {
     // Local Vars
     // int data_len;
     char userpass[24];
+    char junk[10];
+    int data_len;
 
     // Create username and password pair from config_data
     strcpy(userpass, config_data->name);
@@ -78,9 +81,12 @@ int handshake(int server, struct ConfigData *config_data)
     // Send the user password pair
     send(server, userpass, sizeof(userpass), 0);
 
-    // TODO: Wait 1 second for response from server
+    // TODO: Wait 3 second for response from server
     // If no response, return with error
-
+    data_len = recv(server, junk, sizeof(junk), 0);
+    if (data_len > 0) {
+        return 1;
+    }
 
     return 0;
 }
@@ -89,6 +95,7 @@ int create_socket(int server_num, struct ConfigData *config_data)
 {
     // Local Vars
     struct sockaddr_in server;
+    struct timeval tv;
     int port_number = config_data->serv_port[server_num];
 
     // Populate server struct
@@ -101,6 +108,11 @@ int create_socket(int server_num, struct ConfigData *config_data)
         printf("Socket could not be created\n");
         return -1;
     }
+
+    // set sockoption to timeout after blocking for 3 seconds on recv
+    tv.tv_sec = 3;  // timeout time in seconds
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv,sizeof(struct timeval));
 
     // Try to connect
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
