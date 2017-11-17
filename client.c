@@ -25,11 +25,11 @@ int main(int c, char* argv[])
 
         // Parse command and possibly filename from inp_buffer
         cmd = strtok(inp_buffer, " ");
-        filename = strtok(NULL, "\n");
+        filename = strtok(NULL, "\n"); 
 
         // Check if command is one of commands and call applicable routine
         if (strcmp(cmd, "get") == 0) {
-            get_routine(inp_buffer, &config_data);
+            get_routine(filename, &config_data);
         }
         else if (strcmp(cmd, "put") == 0) {
             put_routine(filename, &config_data);
@@ -49,18 +49,13 @@ int main(int c, char* argv[])
     return 0;
 }
 
-void put_routine(char *inp_buffer, struct ConfigData *config_data)
+void put_routine(char *filename, struct ConfigData *config_data)
 {
     // Local Vars
     int sockfd[4], ifile_size;
     char msgheader[24];
-    char *filename;
-    char header_format[] = "%s %s %d";
+    char header_format[] = "put %s %d\n";
     FILE *ifile;
-
-    // Parse filename from input buffer
-    filename = strtok(inp_buffer, " ");
-    filename = strtok(inp_buffer, "\n");
 
     // If filename doesn't exist, return
     if (access(filename, F_OK) == -1)  {
@@ -91,8 +86,9 @@ void put_routine(char *inp_buffer, struct ConfigData *config_data)
     }
 
     // Serialize message header and send to server(s)
-    snprintf(msgheader, sizeof(msgheader), header_format, "put", filename, ifile_size);
+    snprintf(msgheader, sizeof(msgheader), header_format, filename, ifile_size);
 
+    // Send message header to available servers
     for (int i = 0; i < 4; i++) {
         if (sockfd[i] != -1)
             send(sockfd[i], msgheader, sizeof(msgheader), 0);
@@ -101,23 +97,38 @@ void put_routine(char *inp_buffer, struct ConfigData *config_data)
 
     // TODO: BEGIN THE FILE TRANSFER
 
+
+    // Clean up because bugs
     bzero(msgheader, sizeof(msgheader));
 }
 
-void get_routine(char* inp_buffer, struct ConfigData *config_data)
+void get_routine(char* filename, struct ConfigData *config_data)
 {
     // Local Vars
-    int sockfd;
-    int conn_status;
+    int sockfd[4];
+    char header_format[] = "get %s 0\n";
+    char msgheader[24];
 
-    // Get socket file descriptor
-    sockfd = create_socket(0, config_data);
-    if (sockfd == -1) {
-        return;
+    // Create socket descriptors for available servers and authenticate username/password
+    for (int i = 0; i < 4; i++) {
+        sockfd[i] = create_socket(i, config_data);
+        if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
+            if (verbose) printf("INVALID username/password\n");
+            return;
+        }
     }
 
-    // Authenticate username and password with server
-    conn_status = handshake(sockfd, config_data);
+    // Serialize message header
+    snprintf(msgheader, sizeof(msgheader), header_format, filename);
+    printf("msg header: %s\n", msgheader);
+
+    // Send message header to available servers
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] != -1)
+            send(sockfd[i], msgheader, sizeof(msgheader), 0);
+    }
+
+    bzero(msgheader, sizeof(msgheader));
 
 }
 

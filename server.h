@@ -24,3 +24,4 @@ void config_parse(struct ConfigData *config_data);
 void child_handler(int client, struct ConfigData* config_data);
 int validate_credentials(int client, struct ConfigData *config_data);
 void recv_header(int client, char *header, int header_size);
+void setup_directory(char *user, struct ConfigData *config_data);
