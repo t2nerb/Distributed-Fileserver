@@ -6,7 +6,7 @@
 
 #define MAX_BUF_LEN 128
 #define MAX_SERVERS 4
-
+#define MAX_MSG_LEN 48
 
 // Structs
 struct ConfigData {
@@ -25,3 +25,4 @@ void get_routine(char* inp_buffer, struct ConfigData* config_data);
 int create_socket(int server_num, struct ConfigData *config_data);
 int handshake(int server, struct ConfigData *config_data);
 void put_routine(char* inp_buffer, struct ConfigData *config_data);
+void send_file(FILE *ifile, int sockfd[]);

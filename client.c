@@ -21,28 +21,30 @@ int main(int c, char* argv[])
         char* filename = NULL;
 
         // Get command from standard input
-        getLine(prmpt, inp_buffer, MAX_BUF_LEN);
+        if (getLine(prmpt, inp_buffer, MAX_BUF_LEN) != -1) {
 
-        // Parse command and possibly filename from inp_buffer
-        cmd = strtok(inp_buffer, " ");
-        filename = strtok(NULL, "\n"); 
+            // Parse command and possibly filename from inp_buffer
+            cmd = strtok(inp_buffer, " ");
+            filename = strtok(NULL, "\n");
 
-        // Check if command is one of commands and call applicable routine
-        if (strcmp(cmd, "get") == 0) {
-            get_routine(filename, &config_data);
+            // Check if command is one of commands and call applicable routine
+            if (strcmp(cmd, "get") == 0) {
+                get_routine(filename, &config_data);
+            }
+            else if (strcmp(cmd, "put") == 0) {
+                put_routine(filename, &config_data);
+            }
+            else if (strcmp(cmd, "list") == 0) {
+                printf("LIST implementation missing\n");
+            }
+            else if (strcmp(cmd, "exit") == 0) {
+                break;
+            }
+            else {
+                printf("Command not recognized: %s\n", cmd);
+            }
         }
-        else if (strcmp(cmd, "put") == 0) {
-            put_routine(filename, &config_data);
-        }
-        else if (strcmp(cmd, "list") == 0) {
-            printf("LIST implementation missing\n");
-        }
-        else if (strcmp(cmd, "exit") == 0) {
-            break;
-        }
-        else {
-            printf("Command not recognized: %s\n", cmd);
-        }
+
 
     }
 
@@ -53,7 +55,7 @@ void put_routine(char *filename, struct ConfigData *config_data)
 {
     // Local Vars
     int sockfd[4], ifile_size;
-    char msgheader[24];
+    char msgheader[MAX_MSG_LEN];
     char header_format[] = "put %s %d\n";
     FILE *ifile;
 
@@ -96,9 +98,10 @@ void put_routine(char *filename, struct ConfigData *config_data)
 
 
     // TODO: BEGIN THE FILE TRANSFER
+    send_file(ifile, sockfd);
+    fclose(ifile);
 
-
-    // Clean up because bugs
+    // Clean up because bugs errywhere
     bzero(msgheader, sizeof(msgheader));
 }
 
@@ -107,7 +110,7 @@ void get_routine(char* filename, struct ConfigData *config_data)
     // Local Vars
     int sockfd[4];
     char header_format[] = "get %s 0\n";
-    char msgheader[24];
+    char msgheader[MAX_MSG_LEN];
 
     // Create socket descriptors for available servers and authenticate username/password
     for (int i = 0; i < 4; i++) {
@@ -120,7 +123,6 @@ void get_routine(char* filename, struct ConfigData *config_data)
 
     // Serialize message header
     snprintf(msgheader, sizeof(msgheader), header_format, filename);
-    printf("msg header: %s\n", msgheader);
 
     // Send message header to available servers
     for (int i = 0; i < 4; i++) {
@@ -132,6 +134,16 @@ void get_routine(char* filename, struct ConfigData *config_data)
 
 }
 
+
+// Send the relevant file chunks to each of the servers
+void send_file(FILE *ifile, int sockfd[])
+{
+    // Local Vars
+
+
+}
+
+
 // Send username and password to server
 // return 0: Invalid credentials
 // return 1: Valid credentials
@@ -139,7 +151,7 @@ int handshake(int server, struct ConfigData *config_data)
 {
     // Local Vars
     // int data_len;
-    char userpass[24];
+    char userpass[MAX_MSG_LEN];
     char junk[10];
     int data_len;
 
@@ -256,6 +268,9 @@ static int getLine (char *prmpt, char *buff, size_t sz)
         return (extra == 1) ? 2 : 0;
     }
 
+    if (strlen(buff) == 1) return -1;
+
     buff[strlen(buff)-1] = '\0';
+
     return 0;
 }

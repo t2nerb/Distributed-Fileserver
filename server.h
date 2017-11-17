@@ -11,6 +11,7 @@
 
 #define MAX_BUF_LEN 128
 #define MAX_USERS 32
+#define MAX_MSG_LEN 48
 
 struct ConfigData {
     int port;

@@ -137,7 +137,7 @@ int config_socket(struct ConfigData config_data)
 void child_handler(int client, struct ConfigData* config_data)
 {
     // Local Vars
-    char header[24];
+    char header[MAX_MSG_LEN];
     char *cmd, *filename, *username;
     int user_index, filesize;
 
@@ -145,10 +145,10 @@ void child_handler(int client, struct ConfigData* config_data)
     user_index = validate_credentials(client, config_data);
     username = config_data->users[user_index];
 
-    // TODO: Create user working directory
+    // Setup working directory for connected user
     setup_directory(username, config_data);
 
-    // Receive the message header which contains: <command> <filename> <filesize>
+    // Receive the message header which contains: <command> <option1> <option2>
     recv_header(client, header, sizeof(header));
 
     // Parse command, filename and filesize from header
@@ -158,10 +158,10 @@ void child_handler(int client, struct ConfigData* config_data)
 
     // Call relevant cmd procedure
     if (strcmp(cmd, "put") == 0) {
-        printf("PID[%d] %s: %s %s %d\n", getpid(), username, cmd, filename, filesize);
+        printf("%s[%d]: %s %s %d\n", username, getpid(), cmd, filename, filesize);
     }
     else if (strcmp(cmd, "get") == 0) {
-        printf("PID[%d] %s: %s %s\n", getpid(), username, cmd, filename);
+        printf("%s[%d]: %s %s\n", username, getpid(), cmd, filename);
     }
     else if (strcmp(cmd, "list") == 0) {
         printf("Command is list!\n");
@@ -177,9 +177,9 @@ void recv_header(int client, char *header, int header_size)
     // Local Vars
     unsigned int data_len;
 
-    data_len = recv(client, header, 24, 0);
+    data_len = recv(client, header, MAX_MSG_LEN, 0);
 
-    if (data_len < 24) printf("DANGER, NOT ALL BYTES WERE READ FROM HEADER\n");
+    if (data_len < MAX_MSG_LEN) printf("DANGER, NOT ALL BYTES WERE READ FROM HEADER\n");
 
 }
 
@@ -188,7 +188,7 @@ int validate_credentials(int client, struct ConfigData *config_data)
 {
     // Local Vars
     int data_len;
-    char userpass[24];
+    char userpass[MAX_MSG_LEN];
     char *username, *password;
 
     // Receive the credentials
@@ -222,7 +222,7 @@ void setup_directory(char *user, struct ConfigData *config_data)
 {
     // Local Vars
     struct stat st = {0};
-    char new_dir[24];
+    char new_dir[MAX_MSG_LEN];
     char wd_format[] = "./%s/%s/";
     char cwd[1024];
 
