@@ -1,5 +1,6 @@
 #include "server.h"
 
+int verbose = 1;
 
 int main(int argc, char* argv[])
 {
@@ -140,8 +141,6 @@ void child_handler(int client, struct ConfigData* config_data)
     // TODO: Authenticate username and password from client
     validate_credentials(client, config_data);
 
-    printf("Uh oh\n");
-
 }
 
 void validate_credentials(int client, struct ConfigData *config_data)
@@ -164,10 +163,13 @@ void validate_credentials(int client, struct ConfigData *config_data)
     // Check if username name exists AND matches password
     for (int i = 0; i < MAX_USERS; i++) {
         if ((strcmp(username, config_data->users[i]) == 0) && (strcmp(password, config_data->passwords[i]) == 0)) {
-            printf("Fuck yeah\n");
+            if (verbose) printf("VALIDATED USER: %s\n", username);
+            write(client, "1", 1);
             return;
         }
     }
+
+    printf("INVALID USER: %s\n", username);
 
     exit(-1);
 

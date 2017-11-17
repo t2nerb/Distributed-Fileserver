@@ -1,5 +1,7 @@
 #include "client.h"
 
+int verbose = 1;
+
 int main(int c, char* argv[])
 {
     // Local Vars
@@ -15,8 +17,8 @@ int main(int c, char* argv[])
 
         // Local Vars
         char inp_buffer[MAX_BUF_LEN];
-        char* cmd;
-        char* filename;
+        char* cmd = NULL;
+        char* filename = NULL;
 
         // Get command from standard input
         getLine(prmpt, inp_buffer, MAX_BUF_LEN);
@@ -30,7 +32,7 @@ int main(int c, char* argv[])
             get_routine(inp_buffer, &config_data);
         }
         else if (strcmp(cmd, "put") == 0) {
-            printf("PUT implementation missing\n");
+            put_routine(filename, &config_data);
         }
         else if (strcmp(cmd, "list") == 0) {
             printf("LIST implementation missing\n");
@@ -47,7 +49,50 @@ int main(int c, char* argv[])
     return 0;
 }
 
-void get_routine(char* inp_buffer, struct ConfigData* config_data)
+void put_routine(char *inp_buffer, struct ConfigData *config_data)
+{
+    // Local Vars
+    int sockfd[4];
+    char msgheader[24];
+    char *filename;
+    FILE *ifile;
+
+    // Parse filename from input buffer
+    filename = strtok(inp_buffer, " ");
+    filename = strtok(inp_buffer, "\n");
+
+    // If filename doesn't exist, return
+    if (access(filename, F_OK) == -1)  {
+        printf("File not found: %s\n", filename);
+        return;
+    }
+
+    // Create socket descriptors for available servers and authenticate username/password
+    for (int i = 0; i < 4; i++) {
+        sockfd[i] = create_socket(i, config_data);
+        if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
+            if (verbose) printf("INVALID username/password\n");
+            return;
+        }
+    }
+
+    // Open file for reading as binary
+    ifile = fopen(filename, "rb");
+    if (!ifile) {
+        printf("Uh oh, something bad happened\n");
+        return;
+    }
+
+    // Serialize message header
+    strcat(msgheader, "put ");
+    strcat(msgheader, filename);
+
+    printf("send msg: %s\n", msgheader);
+
+    bzero(msgheader, sizeof(msgheader));
+}
+
+void get_routine(char* inp_buffer, struct ConfigData *config_data)
 {
     // Local Vars
     int sockfd;
@@ -55,6 +100,10 @@ void get_routine(char* inp_buffer, struct ConfigData* config_data)
 
     // Get socket file descriptor
     sockfd = create_socket(0, config_data);
+    if (sockfd == -1) {
+        return;
+    }
+
 
     // TODO: Authenticate username and password with server
     conn_status = handshake(sockfd, config_data);
@@ -84,11 +133,7 @@ int handshake(int server, struct ConfigData *config_data)
     // TODO: Wait 3 second for response from server
     // If no response, return with error
     data_len = recv(server, junk, sizeof(junk), 0);
-    if (data_len > 0) {
-        return 1;
-    }
-
-    return 0;
+    return (data_len > 0) ? 1 : 0;
 }
 
 int create_socket(int server_num, struct ConfigData *config_data)
@@ -103,6 +148,10 @@ int create_socket(int server_num, struct ConfigData *config_data)
     server.sin_family = AF_INET;
     server.sin_port = htons(port_number);
 
+    // Populate sockopts
+    tv.tv_sec = 3;  // recv timeout in seconds
+    tv.tv_usec = 0;
+
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == -1) {
         printf("Socket could not be created\n");
@@ -110,13 +159,12 @@ int create_socket(int server_num, struct ConfigData *config_data)
     }
 
     // set sockoption to timeout after blocking for 3 seconds on recv
-    tv.tv_sec = 3;  // timeout time in seconds
-    tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv,sizeof(struct timeval));
 
     // Try to connect
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-        printf("Connection could not be made\n");
+        if (verbose) printf("Server %d is not responding...\n", server_num);
+        return -1;
     }
 
     return sock;
