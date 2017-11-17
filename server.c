@@ -133,17 +133,43 @@ int config_socket(struct ConfigData config_data)
     return sockfd;
 }
 
+
 void child_handler(int client, struct ConfigData* config_data)
 {
     // Local Vars
+    char header[24];
+    char *cmd, *filename, *username;
+    int user_index, filesize;
+
+    // Authenticate username and password from client
+    user_index = validate_credentials(client, config_data);
+    username = config_data->users[user_index];
+
+    // Receive the message header which contains: <command> <filename> <filesize>
+    recv_header(client, header, sizeof(header));
+
+    // Parse command, filename and filesize from header
+    cmd = strtok(header, " ");
+    filename = strdup(strtok(NULL, " "));
+    filesize = atoi(strtok(NULL, "\0"));
 
 
-    // TODO: Authenticate username and password from client
-    validate_credentials(client, config_data);
+    printf("PID[%d] %s %s %s %d\n", getpid(), username, cmd, filename, filesize);
+}
+
+
+// Reliably receive first 24 bytes for header
+void recv_header(int client, char *header, int header_size)
+{
+    // Local Vars
+    unsigned int data_len;
+
+    data_len = recv(client, header, 24, 0);
 
 }
 
-void validate_credentials(int client, struct ConfigData *config_data)
+
+int validate_credentials(int client, struct ConfigData *config_data)
 {
     // Local Vars
     int data_len;
@@ -163,13 +189,13 @@ void validate_credentials(int client, struct ConfigData *config_data)
     // Check if username name exists AND matches password
     for (int i = 0; i < MAX_USERS; i++) {
         if ((strcmp(username, config_data->users[i]) == 0) && (strcmp(password, config_data->passwords[i]) == 0)) {
-            if (verbose) printf("VALIDATED USER: %s\n", username);
+            if (verbose) printf("VERIFIED USER: %s\n", config_data->users[i]);
             write(client, "1", 1);
-            return;
+            return i;
         }
     }
 
-    printf("INVALID USER: %s\n", username);
+    if (verbose) printf("INVALID USER: %s\n", username);
 
     exit(-1);
 

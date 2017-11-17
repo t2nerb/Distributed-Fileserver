@@ -52,9 +52,10 @@ int main(int c, char* argv[])
 void put_routine(char *inp_buffer, struct ConfigData *config_data)
 {
     // Local Vars
-    int sockfd[4];
+    int sockfd[4], ifile_size;
     char msgheader[24];
     char *filename;
+    char header_format[] = "%s %s %d";
     FILE *ifile;
 
     // Parse filename from input buffer
@@ -82,12 +83,23 @@ void put_routine(char *inp_buffer, struct ConfigData *config_data)
         printf("Uh oh, something bad happened\n");
         return;
     }
+    // Get file size
+    else {
+        fseek(ifile, 0L, SEEK_END);
+        ifile_size = ftell(ifile);
+        fseek(ifile, 0L, SEEK_SET);
+    }
 
-    // Serialize message header
-    strcat(msgheader, "put ");
-    strcat(msgheader, filename);
+    // Serialize message header and send to server(s)
+    snprintf(msgheader, sizeof(msgheader), header_format, "put", filename, ifile_size);
 
-    printf("send msg: %s\n", msgheader);
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] != -1)
+            send(sockfd[i], msgheader, sizeof(msgheader), 0);
+    }
+
+
+    // TODO: BEGIN THE FILE TRANSFER
 
     bzero(msgheader, sizeof(msgheader));
 }
@@ -104,8 +116,7 @@ void get_routine(char* inp_buffer, struct ConfigData *config_data)
         return;
     }
 
-
-    // TODO: Authenticate username and password with server
+    // Authenticate username and password with server
     conn_status = handshake(sockfd, config_data);
 
 }
