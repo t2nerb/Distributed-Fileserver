@@ -175,7 +175,7 @@ void put_routine(int client, char *filename, unsigned int filesize)
 {
     // Local Vars
     char fn_format[] = "%s.%d";   // Format: .filename.txt.1
-    char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN], fname[2][MAX_MSG_LEN];
+    char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN], fname[MAX_MSG_LEN];
     char *filebuf;
     unsigned int rebytes = 0, offset = 0, chunk_offset = 0;
     unsigned int chunk_len, lchunk_len;
@@ -196,17 +196,16 @@ void put_routine(int client, char *filename, unsigned int filesize)
         offset += rebytes;
     }
 
-    // Compute size for each 'quarter' of the file
-    chunk_len = (filesize + 4 - 1) / 4;
-    lchunk_len = filesize % 4;
-    if (lchunk_len == 0) lchunk_len = chunk_len;
+    // Compute size for each 'quarter' of the file (last chunk may differ in len)
+    chunk_len = (filesize + 4 - 1) / 4;     // Round down 
+    lchunk_len = (chunk_len*4 == filesize) ? chunk_len : filesize % 4;
 
     // Write the relevant file chunks
     for (int i = 0; i < 2; i++) {
         // Calculate offset where chunk is
         chunk_offset = (chunks[i] - 1) * chunk_len;
-        snprintf(fname[i], sizeof(fname[i]), fn_format, filename, chunks[i]);
-        ofile = fopen(fname[i], "wb");
+        snprintf(fname, sizeof(fname), fn_format, filename, chunks[i]);
+        ofile = fopen(fname, "wb");
 
         if (chunks[i] < 4) {
             fwrite(filebuf+chunk_offset, 1, chunk_len, ofile);
@@ -215,6 +214,7 @@ void put_routine(int client, char *filename, unsigned int filesize)
             fwrite(filebuf+chunk_offset, 1, lchunk_len, ofile);
         }
         fclose(ofile);
+        if (verbose) printf("WROTE FILE: %s\n", fname);
     }
 
     // Cleanup
