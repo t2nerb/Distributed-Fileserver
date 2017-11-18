@@ -163,13 +163,62 @@ void child_handler(int client, struct ConfigData* config_data)
     }
     else if (strcmp(cmd, "get") == 0) {
         printf("%s[%d]: %s %s\n", username, getpid(), cmd, filename);
+        get_routine(client, filename);
     }
     else if (strcmp(cmd, "list") == 0) {
         printf("Command is list!\n");
     }
+    else if (strcmp(cmd, "exit") == 0) {
+        exit(0);
+    }
+
+    exit(0);
 
 
 }
+
+
+void get_routine(int client, char *filename)
+{
+    // Local Vars
+    char fn_format[] = "%s.%d";
+    char get_msg_format[] = "%d %d";
+    char fname[MAX_MSG_LEN], get_msg[MAX_MSG_LEN];
+    unsigned int chunks[2], chunk_ctr;
+
+    // Construct chunk filenames and check if they exist
+    chunk_ctr = 0;
+    for(int i = 0; i < 4; i++) {
+        // Construct filename
+        snprintf(fname, sizeof(fname), fn_format, filename, i+1);
+
+        if (access(fname, F_OK) != -1) {
+            chunks[chunk_ctr++] = i+1;
+        }
+    }
+
+    // If no chunks, set both to 0
+    if (chunk_ctr == 0) {
+        chunks[0] = 0;
+        chunks[1] = 0;
+    }
+
+    // Construct message to indicate chunks
+    snprintf(get_msg, sizeof(get_msg), get_msg_format, chunks[0], chunks[1]);
+
+    // Send a msg indicating what file pair exist
+    send(client, get_msg, sizeof(get_msg), 0);
+
+    // Terminate if file not found
+    if (chunks[0] == 0 && chunks[1] == 0) {
+        exit(0);
+    }
+
+    // Begin to send both files
+
+
+}
+
 
 void put_routine(int client, char *filename, unsigned int filesize)
 {
@@ -197,21 +246,24 @@ void put_routine(int client, char *filename, unsigned int filesize)
     }
 
     // Compute size for each 'quarter' of the file (last chunk may differ in len)
-    chunk_len = (filesize + 4 - 1) / 4;     // Round down 
-    lchunk_len = (chunk_len*4 == filesize) ? chunk_len : filesize % 4;
+    chunk_len = filesize / 4;     // Round down
+    lchunk_len = filesize - chunk_len * 4;
+
+    printf("chunk_len: %d\n", chunk_len);
+    printf("lchunk_len: %d\n", lchunk_len);
 
     // Write the relevant file chunks
     for (int i = 0; i < 2; i++) {
-        // Calculate offset where chunk is
-        chunk_offset = (chunks[i] - 1) * chunk_len;
+        // Construct filename
         snprintf(fname, sizeof(fname), fn_format, filename, chunks[i]);
         ofile = fopen(fname, "wb");
 
+        chunk_offset = (chunks[i] - 1) * chunk_len;
         if (chunks[i] < 4) {
             fwrite(filebuf+chunk_offset, 1, chunk_len, ofile);
         }
         else {
-            fwrite(filebuf+chunk_offset, 1, lchunk_len, ofile);
+            fwrite(filebuf+chunk_offset, 1, chunk_len + lchunk_len, ofile);
         }
         fclose(ofile);
         if (verbose) printf("WROTE FILE: %s\n", fname);
@@ -222,15 +274,21 @@ void put_routine(int client, char *filename, unsigned int filesize)
 }
 
 
-// Reliably receive first 24 bytes for header
+// Reliably receive first 48 bytes for header
 void recv_header(int client, char *header, int header_size)
 {
     // Local Vars
-    unsigned int data_len;
+    unsigned int data_len, offset = 0;
 
-    data_len = recv(client, header, MAX_MSG_LEN, 0);
+    while(offset < MAX_MSG_LEN){
+        data_len = recv(client + offset, header, MAX_MSG_LEN, 0);
+        offset += data_len;
+    }
 
-    if (data_len < MAX_MSG_LEN) printf("DANGER, NOT ALL BYTES WERE READ FROM HEADER\n");
+    if (offset < MAX_MSG_LEN) {
+        printf("DANGER, NOT ALL BYTES WERE READ FROM HEADER\n");
+        printf("MAX_MSG_LEN - offset = %d\n", offset);
+    }
 
 }
 

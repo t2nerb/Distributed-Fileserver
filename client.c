@@ -97,7 +97,7 @@ void put_routine(char *filename, struct ConfigData *config_data)
     }
 
 
-    // TODO: BEGIN THE FILE TRANSFER
+    // BEGIN THE FILE TRANSFER
     send_file(ifile, sockfd, ifile_size);
     fclose(ifile);
 
@@ -114,6 +114,8 @@ void get_routine(char* filename, struct ConfigData *config_data)
     int sockfd[4];
     char header_format[] = "get %s 0\n";
     char msgheader[MAX_MSG_LEN];
+    int server_pair[2] = {0};
+    int shutdown_pair[2] = {0};
 
     // Create socket descriptors for available servers and authenticate username/password
     for (int i = 0; i < 4; i++) {
@@ -124,19 +126,74 @@ void get_routine(char* filename, struct ConfigData *config_data)
         }
     }
 
+    // Figure out which pair of servers to use
+    if (sockfd[0] > 0 && sockfd[2] > 0) {
+        server_pair[0] = 0; // Use servers: 1, 3
+        server_pair[1] = 2;
+        shutdown_pair[0] = 1;
+        shutdown_pair[1] = 3;
+    }
+    else if (sockfd[1] > 0 && sockfd[3] > 0) {
+        server_pair[0] = 1; // Use servers: 2, 4
+        server_pair[1] = 3;
+        shutdown_pair[0] = 0;
+        shutdown_pair[1] = 2;
+    }
+
     // Serialize message header
     snprintf(msgheader, sizeof(msgheader), header_format, filename);
 
-    // Send message header to available servers
-    for (int i = 0; i < 4; i++) {
-        if (sockfd[i] != -1)
-            send(sockfd[i], msgheader, sizeof(msgheader), 0);
+    // Send message header to available servers and shutdown non-utilized servers
+    for (int i = 0; i < 2; i++) {
+        int sindex = server_pair[i];
+        int bindex = shutdown_pair[i];
+        send(sockfd[sindex], msgheader, sizeof(msgheader), 0);
+        send(sockfd[bindex], "exit exit 0\n", sizeof(msgheader), 0);
+        sockfd[bindex] = -1;
     }
 
+    // Begin receiving files
+    recv_files(sockfd, filename, server_pair);
+
+    // Cleanup
     bzero(msgheader, sizeof(msgheader));
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] > 0) {
+            close(sockfd[i]);
+        }
+    }
 
 }
 
+
+void recv_files(int sockfd[], char *filename, int server_pair[])
+{
+    // Local Vars
+    char get_msg[MAX_MSG_LEN];
+    int fc_loc[4] = {0};
+
+    // If servers 1 AND 3 or 2 AND 4 are up, file cannot be reconstructed
+    if (server_pair[0] == 0 && server_pair[1] == 0) {
+        printf("ERROR: Insufficient amount of servers available\n");
+        return;
+    }
+
+    // Receive message from server pair with which chunks server has
+    for (int i = 0; i < 2; i++) {
+        int chunk1, chunk2;
+        int serv_num = server_pair[i];
+
+        // Recv message from server indicating which chunks it has
+        recv(sockfd[serv_num], get_msg, sizeof(get_msg), 0);
+
+        // Parse message and flag corresponding chunk in array
+        chunk1 = atoi(strtok(get_msg, " "));
+        chunk2 = atoi(strtok(NULL, "\n"));
+        fc_loc[chunk1-1] = serv_num;
+        fc_loc[chunk2-1] = serv_num;
+    }
+
+}
 
 // Send the relevant file chunks to each of the servers
 void send_file(FILE *ifile, int sockfd[], unsigned int filesize)

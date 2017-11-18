@@ -27,3 +27,4 @@ int validate_credentials(int client, struct ConfigData *config_data);
 void recv_header(int client, char *header, int header_size);
 void setup_directory(char *user, struct ConfigData *config_data);
 void put_routine(int client, char *filename, unsigned int filesize);
+void get_routine(int client, char *filename);
