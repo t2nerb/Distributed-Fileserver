@@ -25,4 +25,4 @@ void get_routine(char* inp_buffer, struct ConfigData* config_data);
 int create_socket(int server_num, struct ConfigData *config_data);
 int handshake(int server, struct ConfigData *config_data);
 void put_routine(char* inp_buffer, struct ConfigData *config_data);
-void send_file(FILE *ifile, int sockfd[]);
+void send_file(FILE *ifile, int sockfd[], unsigned int filesize);

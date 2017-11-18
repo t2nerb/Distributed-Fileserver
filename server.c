@@ -139,7 +139,7 @@ void child_handler(int client, struct ConfigData* config_data)
     // Local Vars
     char header[MAX_MSG_LEN];
     char *cmd, *filename, *username;
-    int user_index, filesize;
+    unsigned int user_index, filesize;
 
     // Authenticate username and password from client
     user_index = validate_credentials(client, config_data);
@@ -159,6 +159,7 @@ void child_handler(int client, struct ConfigData* config_data)
     // Call relevant cmd procedure
     if (strcmp(cmd, "put") == 0) {
         printf("%s[%d]: %s %s %d\n", username, getpid(), cmd, filename, filesize);
+        put_routine(client, filename, filesize);
     }
     else if (strcmp(cmd, "get") == 0) {
         printf("%s[%d]: %s %s\n", username, getpid(), cmd, filename);
@@ -168,6 +169,41 @@ void child_handler(int client, struct ConfigData* config_data)
     }
 
 
+}
+
+void put_routine(int client, char *filename, unsigned int filesize)
+{
+    // Local Vars
+    char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN];
+    char *filebuf;
+    unsigned int rebytes = 0, offset = 0;
+    char *chunks[2];
+
+    // Receive message to indicate what file chunks to keep
+    rebytes = recv(client, put_msg, sizeof(put_msg), 0);
+    chunks[0] = strtok(put_msg, " ");
+    chunks[1] = strtok(NULL, "\n");
+
+    printf("Chunks: %s %s\n", chunks[0], chunks[1]);
+
+    // Receive entire file
+    filebuf = malloc(filesize);
+    rebytes = 0, offset = 0;
+    while (offset < filesize) {
+        rebytes = recv(client, buffer, sizeof(buffer), 0);
+        memcpy(filebuf + offset, buffer, rebytes);
+        offset += rebytes;
+    }
+
+    // Write file contents
+    FILE *ofile = fopen(filename, "wb");
+    fwrite(filebuf, 1, offset, ofile);
+
+    // Construct the names for each of the file chunks
+
+    //
+    fclose(ofile);
+    free(filebuf);
 }
 
 

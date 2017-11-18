@@ -98,11 +98,14 @@ void put_routine(char *filename, struct ConfigData *config_data)
 
 
     // TODO: BEGIN THE FILE TRANSFER
-    send_file(ifile, sockfd);
+    send_file(ifile, sockfd, ifile_size);
     fclose(ifile);
 
     // Clean up because bugs errywhere
     bzero(msgheader, sizeof(msgheader));
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] > 0) close(sockfd[i]);
+    }
 }
 
 void get_routine(char* filename, struct ConfigData *config_data)
@@ -136,10 +139,41 @@ void get_routine(char* filename, struct ConfigData *config_data)
 
 
 // Send the relevant file chunks to each of the servers
-void send_file(FILE *ifile, int sockfd[])
+void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
 {
     // Local Vars
+    char pairs[4][MAX_MSG_LEN];
+    char *filebuf = NULL;
+    unsigned int rbytes = 0, sbytes = 0;
 
+    // Hard code the file pairs to store
+    strcpy(pairs[0], "1 2\n");
+    strcpy(pairs[1], "2 3\n");
+    strcpy(pairs[2], "3 4\n");
+    strcpy(pairs[3], "4 1\n");
+
+    // Send msg to server to indicate what chunks to keep
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] > 0) {
+            send(sockfd[i], pairs[i], sizeof(pairs[i]), 0);
+        }
+    }
+
+    // Read the entire file
+    filebuf = malloc(filesize);
+    while(rbytes < filesize) {
+        rbytes += fread(filebuf, 1, filesize, ifile);
+        printf("rbytes = %d\n", rbytes);
+    }
+
+    // Send entire file to all servers
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] > 0) {
+            sbytes = send(sockfd[i], filebuf, filesize, 0);
+        }
+    }
+
+    // Done on client side
 
 }
 
@@ -218,7 +252,7 @@ void config_parse(struct ConfigData* config_data)
     }
 
     // Loop through file and store relevant information into struct
-    int server_ctr = 0;
+    int serv_ctr = 0;
     while (fgets(conf_line, MAX_BUF_LEN, config_file))
     {
         // Local Vars
@@ -229,10 +263,10 @@ void config_parse(struct ConfigData* config_data)
             line_type = strtok(conf_line, " ");
 
             if (strcmp(line_type, "Server") == 0) {
-                config_data->serv_name[server_ctr] = strdup(strtok(NULL, " "));
-                config_data->serv_addr[server_ctr] = strdup(strtok(NULL, ":"));
-                config_data->serv_port[server_ctr] = atoi(strdup(strtok(NULL, "\n")));
-                server_ctr++;
+                config_data->serv_name[serv_ctr] = strdup(strtok(NULL, " "));
+                config_data->serv_addr[serv_ctr] = strdup(strtok(NULL, ":"));
+                config_data->serv_port[serv_ctr] = atoi(strdup(strtok(NULL, "\n")));
+                serv_ctr++;
             }
             else if (strcmp(line_type, "Username:") == 0) {
                 config_data->name = strdup(strtok(NULL, "\n"));

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#define MAX_BUF_LEN 128
+#define MAX_BUF_LEN 512
 #define MAX_USERS 32
 #define MAX_MSG_LEN 48
 
@@ -26,3 +26,4 @@ void child_handler(int client, struct ConfigData* config_data);
 int validate_credentials(int client, struct ConfigData *config_data);
 void recv_header(int client, char *header, int header_size);
 void setup_directory(char *user, struct ConfigData *config_data);
+void put_routine(int client, char *filename, unsigned int filesize);
