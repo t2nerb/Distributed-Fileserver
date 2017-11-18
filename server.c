@@ -182,8 +182,9 @@ void get_routine(int client, char *filename)
 {
     // Local Vars
     char fn_format[] = "%s.%d";
-    char get_msg_format[] = "%d %d";
-    char fname[MAX_MSG_LEN], get_msg[MAX_MSG_LEN];
+    char get_msg_format[] = "%d %d\n";
+    char sz_format[] = "%d\n";
+    char fname[MAX_MSG_LEN], get_msg[MAX_MSG_LEN], fcname[MAX_MSG_LEN];
     unsigned int chunks[2], chunk_ctr;
 
     // Construct chunk filenames and check if they exist
@@ -214,10 +215,47 @@ void get_routine(int client, char *filename)
         exit(0);
     }
 
-    // Begin to send both files
+    // Send both files
+    for (int i = 0; i < 2; i++) {
+        char msg[MAX_MSG_LEN];
+        char *filebuf;
+        int chunk_num, sz, sbytes, rbytes = 0;
+        FILE *ifile;
+
+        // Receive message from client indicating which chunk is requested
+        recv_header(client, msg, sizeof(msg));
+        chunk_num = atoi(strtok(msg, "\n"));
+
+        // Construct filename to read and send
+        snprintf(fcname, sizeof(fcname), fn_format, filename, chunk_num);
+
+        // Open file for reading binary and send filesize to client
+        ifile = fopen(fcname, "rb");
+        fseek(ifile, 0L, SEEK_END);
+        sz = ftell(ifile);
+        rewind(ifile);
+
+        // Construct message indicating filesize to client
+        snprintf(msg, sizeof(msg), sz_format, sz);
+        send(client, msg, sizeof(msg), 0);
+
+        // Read the entire file
+        filebuf = malloc(sz);
+        while(rbytes < sz) {
+            rbytes += fread(filebuf, 1, sz, ifile);
+        }
+
+        // Send to client
+        sbytes = send(client, filebuf, sz, 0);
+
+        // Cleanup
+        free(filebuf);
+        fclose(ifile);
+    }
 
 
 }
+
 
 
 void put_routine(int client, char *filename, unsigned int filesize)
@@ -281,7 +319,7 @@ void recv_header(int client, char *header, int header_size)
     unsigned int data_len, offset = 0;
 
     while(offset < MAX_MSG_LEN){
-        data_len = recv(client + offset, header, MAX_MSG_LEN, 0);
+        data_len = recv(client, header + offset, MAX_MSG_LEN, 0);
         offset += data_len;
     }
 

@@ -169,7 +169,11 @@ void get_routine(char* filename, struct ConfigData *config_data)
 void recv_files(int sockfd[], char *filename, int server_pair[])
 {
     // Local Vars
+    char getf_format[] = "%d\n";
+    char getf_msg[MAX_MSG_LEN];
     char get_msg[MAX_MSG_LEN];
+    char *file_buf[4];
+    unsigned int file_size[4];
     int fc_loc[4] = {0};
 
     // If servers 1 AND 3 or 2 AND 4 are up, file cannot be reconstructed
@@ -191,6 +195,60 @@ void recv_files(int sockfd[], char *filename, int server_pair[])
         chunk2 = atoi(strtok(NULL, "\n"));
         fc_loc[chunk1-1] = serv_num;
         fc_loc[chunk2-1] = serv_num;
+
+        // If both chunks are 0, file not found
+        if (chunk1 == 0 && chunk2 == 0) {
+            printf("File not found: %s\n", filename);
+            return;
+        }
+    }
+
+    // Get each chunk from each server
+    for (int i = 0; i < 2; i++) {
+        int serv_num = server_pair[i];
+
+        // Get the two chunks from serv_num
+        for (int i = 0; i < 4; i++) {
+            if (fc_loc[i] == serv_num) {
+                unsigned int rebytes, offset;
+                char sz_msg[MAX_MSG_LEN];
+                char buffer[MAX_BUF_LEN];
+
+                // Send request for file chunk
+                snprintf(getf_msg, sizeof(getf_msg), getf_format, i+1);
+                send(sockfd[serv_num], getf_msg, sizeof(getf_msg), 0);
+
+                // Receive message from server and parse filesize
+                recv(sockfd[serv_num], sz_msg, sizeof(sz_msg), 0);
+                file_size[i] = atoi(strtok(sz_msg, "\n"));
+                file_buf[i] = malloc(file_size[i]);
+
+                // Receive file chunk
+                rebytes = 0, offset = 0;
+                while (offset < file_size[i]) {
+                    rebytes = recv(sockfd[serv_num], buffer, sizeof(buffer), 0);
+                    memcpy(file_buf[i] + offset, buffer, rebytes);
+                    offset += rebytes;
+                }
+
+            }
+
+        }
+
+    }
+
+    // Create file
+    FILE *ofile = fopen(filename, "wb");
+
+    // Now write each of the file chunks to a file with filename
+    for (int i = 0; i < 4; i++) {
+        fwrite(file_buf[i], 1, file_size[i], ofile);
+    }
+
+    // Cleanup
+    fclose(ofile);
+    for (int i = 0; i < 4; i++) {
+        free(file_buf[i]);
     }
 
 }
@@ -220,7 +278,7 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     filebuf = malloc(filesize);
     while(rbytes < filesize) {
         rbytes += fread(filebuf, 1, filesize, ifile);
-        printf("rbytes = %d\n", rbytes);
+        if (verbose) printf("rbytes = %d\n", rbytes);
     }
 
     // Send entire file to all servers
@@ -231,7 +289,6 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     }
 
     // Done on client side
-
 }
 
 
