@@ -184,7 +184,6 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
 int handshake(int server, struct ConfigData *config_data)
 {
     // Local Vars
-    // int data_len;
     char userpass[MAX_MSG_LEN];
     char junk[10];
     int data_len;
@@ -198,8 +197,7 @@ int handshake(int server, struct ConfigData *config_data)
     // Send the user password pair
     send(server, userpass, sizeof(userpass), 0);
 
-    // TODO: Wait 3 second for response from server
-    // If no response, return with error
+    // If no response, return with 'error'
     data_len = recv(server, junk, sizeof(junk), 0);
     return (data_len > 0) ? 1 : 0;
 }

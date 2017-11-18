@@ -174,17 +174,18 @@ void child_handler(int client, struct ConfigData* config_data)
 void put_routine(int client, char *filename, unsigned int filesize)
 {
     // Local Vars
-    char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN];
+    char fn_format[] = "%s.%d";   // Format: .filename.txt.1
+    char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN], fname[2][MAX_MSG_LEN];
     char *filebuf;
-    unsigned int rebytes = 0, offset = 0;
-    char *chunks[2];
+    unsigned int rebytes = 0, offset = 0, chunk_offset = 0;
+    unsigned int chunk_len, lchunk_len;
+    unsigned int chunks[2];
+    FILE *ofile;
 
     // Receive message to indicate what file chunks to keep
     rebytes = recv(client, put_msg, sizeof(put_msg), 0);
-    chunks[0] = strtok(put_msg, " ");
-    chunks[1] = strtok(NULL, "\n");
-
-    printf("Chunks: %s %s\n", chunks[0], chunks[1]);
+    chunks[0] = atoi(strtok(put_msg, " "));
+    chunks[1] = atoi(strtok(NULL, "\n"));
 
     // Receive entire file
     filebuf = malloc(filesize);
@@ -195,14 +196,28 @@ void put_routine(int client, char *filename, unsigned int filesize)
         offset += rebytes;
     }
 
-    // Write file contents
-    FILE *ofile = fopen(filename, "wb");
-    fwrite(filebuf, 1, offset, ofile);
+    // Compute size for each 'quarter' of the file
+    chunk_len = (filesize + 4 - 1) / 4;
+    lchunk_len = filesize % 4;
+    if (lchunk_len == 0) lchunk_len = chunk_len;
 
-    // Construct the names for each of the file chunks
+    // Write the relevant file chunks
+    for (int i = 0; i < 2; i++) {
+        // Calculate offset where chunk is
+        chunk_offset = (chunks[i] - 1) * chunk_len;
+        snprintf(fname[i], sizeof(fname[i]), fn_format, filename, chunks[i]);
+        ofile = fopen(fname[i], "wb");
 
-    //
-    fclose(ofile);
+        if (chunks[i] < 4) {
+            fwrite(filebuf+chunk_offset, 1, chunk_len, ofile);
+        }
+        else {
+            fwrite(filebuf+chunk_offset, 1, lchunk_len, ofile);
+        }
+        fclose(ofile);
+    }
+
+    // Cleanup
     free(filebuf);
 }
 
