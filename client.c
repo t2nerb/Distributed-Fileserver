@@ -1,6 +1,6 @@
 #include "client.h"
 
-int verbose = 1;
+int verbose = 0;
 
 int main(int c, char* argv[])
 {
@@ -67,7 +67,7 @@ void list_routine(struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf("INVALID username/password\n");
+            if (verbose) printf(" ERROR: Invalid username/password\n");
             return;
         }
     }
@@ -130,7 +130,7 @@ void put_routine(char *filename, struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf("INVALID username/password\n");
+            if (verbose) printf(" ERROR: Invalid username/password\n");
             return;
         }
     }
@@ -182,7 +182,7 @@ void get_routine(char* filename, struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf("INVALID username/password\n");
+            if (verbose) printf(" ERROR: Invalid username/password\n");
             return;
         }
     }
@@ -312,6 +312,8 @@ void recv_files(int sockfd[], char *filename, int server_pair[])
         free(file_buf[i]);
     }
 
+    printf(" Successfully wrote file: %s\n", filename);
+
 }
 
 // Send the relevant file chunks to each of the servers
@@ -339,7 +341,6 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     filebuf = malloc(filesize);
     while(rbytes < filesize) {
         rbytes += fread(filebuf, 1, filesize, ifile);
-        if (verbose) printf("rbytes = %d\n", rbytes);
     }
 
     // Send entire file to all servers
@@ -350,6 +351,7 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     }
 
     // Done on client side
+    printf(" Successfully wrote file to fileserver\n");
 }
 
 
@@ -404,7 +406,7 @@ int create_socket(int server_num, struct ConfigData *config_data)
 
     // Try to connect
     if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-        if (verbose) printf("Server %d is not responding...\n", server_num);
+        if (verbose) printf(" Server %d is not responding...\n", server_num);
         return -1;
     }
 
