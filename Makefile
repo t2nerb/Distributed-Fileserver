@@ -1,5 +1,6 @@
 CC=gcc
 CFLAGS= -Wall
+LDFLAGS=-lssl -lcrypto
 
 .PHONY: clean all
 
@@ -9,7 +10,7 @@ server: server.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 client: client.c
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm -f server
