@@ -57,7 +57,7 @@ void list_routine(struct ConfigData *config_data)
     int sockfd[4];
     int snum = -1;
     int construct_flag = 0;
-    unsigned int rebytes = 0;
+    // unsigned int rebytes = 0;
     char list_format[] = "list %s 0\n";
     char list_header[MAX_MSG_LEN];
     char list_msg[MAX_BUF_LEN];
@@ -239,7 +239,7 @@ void recv_files(int sockfd[], char *filename, int server_pair[])
 
     // If servers 1 AND 3 or 2 AND 4 are up, file cannot be reconstructed
     if (server_pair[0] == 0 && server_pair[1] == 0) {
-        printf("ERROR: Insufficient amount of servers available\n");
+        printf(" ERROR: Insufficient amount of servers available\n");
         return;
     }
 
@@ -319,10 +319,10 @@ void recv_files(int sockfd[], char *filename, int server_pair[])
 // Send the relevant file chunks to each of the servers
 void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
 {
-    // Local Vars
     char pairs[4][MAX_MSG_LEN];
     char *filebuf = NULL;
-    unsigned int rbytes = 0, sbytes = 0;
+    int shift;
+    unsigned int rbytes = 0;
 
     // Hard code the file pairs to store
     strcpy(pairs[0], "1 2\n");
@@ -330,10 +330,15 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     strcpy(pairs[2], "3 4\n");
     strcpy(pairs[3], "4 1\n");
 
+    // TODO: Use MD5sum % 4 to decide which chunks go on which servers
+    shift = md5_mod4(ifile);
+    printf("shift: %d\n", shift);
+
     // Send msg to server to indicate what chunks to keep
     for (int i = 0; i < 4; i++) {
         if (sockfd[i] > 0) {
-            send(sockfd[i], pairs[i], sizeof(pairs[i]), 0);
+            int pair_index = (i + shift) % 4;
+            send(sockfd[i], pairs[pair_index], sizeof(pairs[pair_index]), 0);
         }
     }
 
@@ -346,7 +351,7 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     // Send entire file to all servers
     for (int i = 0; i < 4; i++) {
         if (sockfd[i] > 0) {
-            sbytes = send(sockfd[i], filebuf, filesize, 0);
+            send(sockfd[i], filebuf, filesize, 0);
         }
     }
 
@@ -355,12 +360,35 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
 }
 
 
+int md5_mod4(FILE *ifile)
+{
+    unsigned char data[1024];
+    unsigned char c[MD5_DIGEST_LENGTH];
+    unsigned int bytes = 0, md5_num;
+    MD5_CTX mdContext;
+
+    MD5_Init (&mdContext);
+    while ((bytes = fread (data, 1, 1024, ifile)) != 0) {
+        MD5_Update (&mdContext, data, bytes);
+    }
+    printf("MADE IT HERE\n");
+    MD5_Final (c,&mdContext);
+    // for(int i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
+    md5_num = (unsigned int) c[MD5_DIGEST_LENGTH-1];
+    printf("LAST BIT: %d\n", md5_num);
+
+    // Cleanup
+    rewind(ifile);
+
+    return md5_num % 4;
+}
+
+
 // Send username and password to server
 // return 0: Invalid credentials
 // return 1: Valid credentials
 int handshake(int server, struct ConfigData *config_data)
 {
-    // Local Vars
     char userpass[MAX_MSG_LEN];
     char junk[10];
     int data_len;
@@ -381,7 +409,6 @@ int handshake(int server, struct ConfigData *config_data)
 
 int create_socket(int server_num, struct ConfigData *config_data)
 {
-    // Local Vars
     struct sockaddr_in server;
     struct timeval tv;
     int port_number = config_data->serv_port[server_num];
@@ -416,7 +443,6 @@ int create_socket(int server_num, struct ConfigData *config_data)
 }
 void config_parse(struct ConfigData* config_data)
 {
-    // Local Vars
     char conf_line[MAX_BUF_LEN];
     FILE *config_file;
 

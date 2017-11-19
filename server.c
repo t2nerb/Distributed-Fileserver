@@ -246,7 +246,7 @@ void get_routine(int client, char *filename)
     for (int i = 0; i < 2; i++) {
         char msg[MAX_MSG_LEN];
         char *filebuf;
-        int chunk_num, sz, sbytes, rbytes = 0;
+        int chunk_num, sz, rbytes = 0;
         FILE *ifile;
 
         // Receive message from client indicating which chunk is requested
@@ -273,7 +273,7 @@ void get_routine(int client, char *filename)
         }
 
         // Send to client
-        sbytes = send(client, filebuf, sz, 0);
+        send(client, filebuf, sz, 0);
 
         // Cleanup
         free(filebuf);
