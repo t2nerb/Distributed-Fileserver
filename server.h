@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <string.h>
 
 #define MAX_BUF_LEN 512
@@ -28,3 +29,4 @@ void recv_header(int client, char *header, int header_size);
 void setup_directory(char *user, struct ConfigData *config_data);
 void put_routine(int client, char *filename, unsigned int filesize);
 void get_routine(int client, char *filename);
+void list_routine(int client);

@@ -35,7 +35,7 @@ int main(int c, char* argv[])
                 put_routine(filename, &config_data);
             }
             else if (strcmp(cmd, "list") == 0) {
-                printf("LIST implementation missing\n");
+                list_routine(&config_data);
             }
             else if (strcmp(cmd, "exit") == 0) {
                 break;
@@ -50,6 +50,67 @@ int main(int c, char* argv[])
 
     return 0;
 }
+
+void list_routine(struct ConfigData *config_data)
+{
+    // Local Vars
+    int sockfd[4];
+    int snum = -1;
+    int construct_flag = 0;
+    unsigned int rebytes = 0;
+    char list_format[] = "list %s 0\n";
+    char list_header[MAX_MSG_LEN];
+    char list_msg[MAX_BUF_LEN];
+    char *filename = NULL;
+
+    // Create socket descriptors for available servers and authenticate username/password
+    for (int i = 0; i < 4; i++) {
+        sockfd[i] = create_socket(i, config_data);
+        if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
+            if (verbose) printf("INVALID username/password\n");
+            return;
+        }
+    }
+
+    // Check if file can be reconstructed or not
+    if ((sockfd[0] > 0 && sockfd[2] > 0) || (sockfd[1] > 0 && sockfd[3] > 0)) {
+        construct_flag = 1;
+    }
+
+    // Send message to available servers and only utilize first server
+    snprintf(list_header, sizeof(list_header), list_format, "list");
+    for(int i = 0; i < 4; i++) {
+        if (sockfd[i] > 0 && snum == -1) {
+            send(sockfd[i], list_header, sizeof(list_header), 0);
+            snum = i;
+        }
+        else if (sockfd[i] > 0 && snum != -1) {
+            send(sockfd[i], "exit exit 0\n", sizeof(list_header), 0);
+            close(sockfd[i]);
+            sockfd[i] = -1;
+        }
+    }
+
+    // Receive message from available server
+    recv(sockfd[snum], list_msg, sizeof(list_msg), 0);
+
+    filename = strtok(list_msg, "\n");
+    while (filename) {
+        if (construct_flag) {
+            printf(" %s\n", filename);
+        }
+        else {
+            printf(" [incomplete] %s\n", filename);
+        }
+        filename = strtok(NULL, "\n");
+    }
+
+
+    // Cleanup
+    close(sockfd[snum]);
+
+}
+
 
 void put_routine(char *filename, struct ConfigData *config_data)
 {
@@ -208,26 +269,26 @@ void recv_files(int sockfd[], char *filename, int server_pair[])
         int serv_num = server_pair[i];
 
         // Get the two chunks from serv_num
-        for (int i = 0; i < 4; i++) {
-            if (fc_loc[i] == serv_num) {
+        for (int j = 0; j < 4; j++) {
+            if (fc_loc[j] == serv_num) {
                 unsigned int rebytes, offset;
                 char sz_msg[MAX_MSG_LEN];
                 char buffer[MAX_BUF_LEN];
 
                 // Send request for file chunk
-                snprintf(getf_msg, sizeof(getf_msg), getf_format, i+1);
+                snprintf(getf_msg, sizeof(getf_msg), getf_format, j+1);
                 send(sockfd[serv_num], getf_msg, sizeof(getf_msg), 0);
 
                 // Receive message from server and parse filesize
                 recv(sockfd[serv_num], sz_msg, sizeof(sz_msg), 0);
-                file_size[i] = atoi(strtok(sz_msg, "\n"));
-                file_buf[i] = malloc(file_size[i]);
+                file_size[j] = atoi(strtok(sz_msg, "\n"));
+                file_buf[j] = malloc(file_size[j]);
 
                 // Receive file chunk
                 rebytes = 0, offset = 0;
-                while (offset < file_size[i]) {
+                while (offset < file_size[j]) {
                     rebytes = recv(sockfd[serv_num], buffer, sizeof(buffer), 0);
-                    memcpy(file_buf[i] + offset, buffer, rebytes);
+                    memcpy(file_buf[j] + offset, buffer, rebytes);
                     offset += rebytes;
                 }
 

@@ -5,7 +5,7 @@ int verbose = 1;
 int main(int argc, char* argv[])
 {
     if (argc < 3) {
-        printf("Usage: ./server DFS<num> port\n");
+        printf("Usage: ./server /DFS<num> port\n");
         exit(-1);
     }
 
@@ -166,7 +166,8 @@ void child_handler(int client, struct ConfigData* config_data)
         get_routine(client, filename);
     }
     else if (strcmp(cmd, "list") == 0) {
-        printf("Command is list!\n");
+        printf("%s[%d]: %s\n", username, getpid(), cmd);
+        list_routine(client);
     }
     else if (strcmp(cmd, "exit") == 0) {
         exit(0);
@@ -175,6 +176,32 @@ void child_handler(int client, struct ConfigData* config_data)
     exit(0);
 
 
+}
+
+
+void list_routine(int client)
+{
+    // Local Vars
+    DIR *d;
+    struct dirent *dir;
+    char list_msg[MAX_BUF_LEN];
+    unsigned int counter = 0;
+
+    // Get directory contents
+    d = opendir(".");
+    while ((dir = readdir(d)) != NULL) {
+        if (counter % 2 == 0 && counter > 0) {
+            strncat(list_msg, dir->d_name, strlen(dir->d_name)-2);
+            strcat(list_msg, "\n");
+            // printf("%s\n", dir->d_name);
+        }
+        counter += 1;
+    }
+    closedir(d);
+
+    // Send the string with directory contents to the client
+    // Elements are delimited by '\n'
+    send(client, list_msg, sizeof(list_msg), 0);
 }
 
 
@@ -312,18 +339,18 @@ void put_routine(int client, char *filename, unsigned int filesize)
 }
 
 
-// Reliably receive first 48 bytes for header
-void recv_header(int client, char *header, int header_size)
+// Reliably receive header_size bytes
+void recv_header(int client, char *msg, int msg_size)
 {
     // Local Vars
     unsigned int data_len, offset = 0;
 
-    while(offset < MAX_MSG_LEN){
-        data_len = recv(client, header + offset, MAX_MSG_LEN, 0);
+    while(offset < msg_size){
+        data_len = recv(client, msg + offset, msg_size, 0);
         offset += data_len;
     }
 
-    if (offset < MAX_MSG_LEN) {
+    if (offset < msg_size) {
         printf("DANGER, NOT ALL BYTES WERE READ FROM HEADER\n");
         printf("MAX_MSG_LEN - offset = %d\n", offset);
     }
