@@ -67,9 +67,14 @@ void list_routine(struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf(" ERROR: Invalid username/password\n");
+            printf(" ERROR: Invalid username/password\n");
             return;
         }
+    }
+
+    if (sockfd[0] == -1 && sockfd[1] == -1 && sockfd[2] == -1 && sockfd[3] == -1) {
+        printf(" ERROR: All servers are down\n");
+        return;
     }
 
     // Check if file can be reconstructed or not
@@ -122,7 +127,7 @@ void put_routine(char *filename, struct ConfigData *config_data)
 
     // If filename doesn't exist, return
     if (access(filename, F_OK) == -1)  {
-        printf("File not found: %s\n", filename);
+        printf(" File not found: %s\n", filename);
         return;
     }
 
@@ -130,9 +135,14 @@ void put_routine(char *filename, struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf(" ERROR: Invalid username/password\n");
+            printf(" ERROR: Invalid username/password\n");
             return;
         }
+    }
+
+    if (sockfd[0] == -1 && sockfd[1] == -1 && sockfd[2] == -1 && sockfd[3] == -1) {
+        printf(" ERROR: All servers are down\n");
+        return;
     }
 
     // Open file for reading as binary
@@ -182,9 +192,14 @@ void get_routine(char* filename, struct ConfigData *config_data)
     for (int i = 0; i < 4; i++) {
         sockfd[i] = create_socket(i, config_data);
         if (sockfd[i] != -1 && handshake(sockfd[i], config_data) == 0) {
-            if (verbose) printf(" ERROR: Invalid username/password\n");
+            printf(" ERROR: Invalid username/password\n");
             return;
         }
+    }
+
+    if (sockfd[0] == -1 && sockfd[1] == -1 && sockfd[2] == -1 && sockfd[3] == -1) {
+        printf(" ERROR: All servers are down\n");
+        return;
     }
 
     // Figure out which pair of servers to use
