@@ -345,9 +345,8 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
     strcpy(pairs[2], "3 4\n");
     strcpy(pairs[3], "4 1\n");
 
-    // TODO: Use MD5sum % 4 to decide which chunks go on which servers
+    // Use MD5sum % 4 to decide which chunks go on which servers
     shift = md5_mod4(ifile);
-    printf("shift: %d\n", shift);
 
     // Send msg to server to indicate what chunks to keep
     for (int i = 0; i < 4; i++) {
@@ -372,6 +371,8 @@ void send_file(FILE *ifile, int sockfd[], unsigned int filesize)
 
     // Done on client side
     printf(" Successfully wrote file to fileserver\n");
+
+    free(filebuf);
 }
 
 
@@ -386,11 +387,9 @@ int md5_mod4(FILE *ifile)
     while ((bytes = fread (data, 1, 1024, ifile)) != 0) {
         MD5_Update (&mdContext, data, bytes);
     }
-    printf("MADE IT HERE\n");
     MD5_Final (c,&mdContext);
     // for(int i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
     md5_num = (unsigned int) c[MD5_DIGEST_LENGTH-1];
-    printf("LAST BIT: %d\n", md5_num);
 
     // Cleanup
     rewind(ifile);
