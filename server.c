@@ -9,7 +9,6 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
-    // Local Vars
     int sockfd;
     unsigned int client_len;
     struct sockaddr_in client;
@@ -26,7 +25,6 @@ int main(int argc, char* argv[])
 
     // Primary loop for command line interface
     for (;;) {
-        // Local Vars
         int clientfd;
         int pid;
 
@@ -65,7 +63,6 @@ int main(int argc, char* argv[])
 // Parse the dfs.conf file and store the data into a struct
 void config_parse(struct ConfigData *config_data)
 {
-    // Local vars
     char conf_line[MAX_BUF_LEN];
     FILE *config_file;
 
@@ -79,8 +76,6 @@ void config_parse(struct ConfigData *config_data)
     int counter = 0;
     while (fgets(conf_line, MAX_BUF_LEN, config_file))
     {
-        // Local Vars
-
         // Don't parse comments
         if (conf_line[0] != '#') {
             config_data->users[counter] = strdup(strtok(conf_line, " "));
@@ -97,7 +92,6 @@ void config_parse(struct ConfigData *config_data)
 // Bind to socket and listen on port
 int config_socket(struct ConfigData config_data)
 {
-    // Local Vars
     int sockfd;
     int enable = 1;
     struct sockaddr_in remote;
@@ -136,7 +130,6 @@ int config_socket(struct ConfigData config_data)
 
 void child_handler(int client, struct ConfigData* config_data)
 {
-    // Local Vars
     char header[MAX_MSG_LEN];
     char *cmd, *filename, *username;
     unsigned int user_index, filesize;
@@ -181,7 +174,6 @@ void child_handler(int client, struct ConfigData* config_data)
 
 void list_routine(int client)
 {
-    // Local Vars
     DIR *d;
     struct dirent *dir;
     char list_msg[MAX_BUF_LEN];
@@ -191,7 +183,7 @@ void list_routine(int client)
     d = opendir(".");
     while ((dir = readdir(d)) != NULL) {
         if (counter % 2 == 0 && counter > 0) {
-            strncat(list_msg, dir->d_name, strlen(dir->d_name)-2);
+            strncat(list_msg, dir->d_name+1, strlen(dir->d_name)-3);
             strcat(list_msg, "\n");
             // printf("%s\n", dir->d_name);
         }
@@ -207,8 +199,7 @@ void list_routine(int client)
 
 void get_routine(int client, char *filename)
 {
-    // Local Vars
-    char fn_format[] = "%s.%d";
+    char fn_format[] = ".%s.%d";
     char get_msg_format[] = "%d %d\n";
     char sz_format[] = "%d\n";
     char fname[MAX_MSG_LEN], get_msg[MAX_MSG_LEN], fcname[MAX_MSG_LEN];
@@ -287,8 +278,7 @@ void get_routine(int client, char *filename)
 
 void put_routine(int client, char *filename, unsigned int filesize)
 {
-    // Local Vars
-    char fn_format[] = "%s.%d";   // Format: .filename.txt.1
+    char fn_format[] = ".%s.%d";   // Format: .filename.txt.1
     char put_msg[MAX_MSG_LEN], buffer[MAX_BUF_LEN], fname[MAX_MSG_LEN];
     char *filebuf;
     unsigned int rebytes = 0, offset = 0, chunk_offset = 0;
@@ -342,7 +332,6 @@ void put_routine(int client, char *filename, unsigned int filesize)
 // Reliably receive header_size bytes
 void recv_header(int client, char *msg, int msg_size)
 {
-    // Local Vars
     unsigned int data_len, offset = 0;
 
     while(offset < msg_size){
@@ -360,7 +349,6 @@ void recv_header(int client, char *msg, int msg_size)
 
 int validate_credentials(int client, struct ConfigData *config_data)
 {
-    // Local Vars
     int data_len;
     char userpass[MAX_MSG_LEN];
     char *username, *password;
@@ -394,7 +382,6 @@ int validate_credentials(int client, struct ConfigData *config_data)
 
 void setup_directory(char *user, struct ConfigData *config_data)
 {
-    // Local Vars
     struct stat st = {0};
     char new_dir[MAX_MSG_LEN];
     char wd_format[] = "./%s/%s/";

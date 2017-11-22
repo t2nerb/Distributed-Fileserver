@@ -4,7 +4,6 @@ int verbose = 0;
 
 int main(int c, char* argv[])
 {
-    // Local Vars
     char* prmpt = "Fileserver> ";
     struct ConfigData config_data;
 
@@ -15,7 +14,6 @@ int main(int c, char* argv[])
     // Primary loop for command line interface
     for (;;) {
 
-        // Local Vars
         char inp_buffer[MAX_BUF_LEN];
         char* cmd = NULL;
         char* filename = NULL;
@@ -53,7 +51,6 @@ int main(int c, char* argv[])
 
 void list_routine(struct ConfigData *config_data)
 {
-    // Local Vars
     int sockfd[4];
     int snum = -1;
     int construct_flag = 0;
@@ -119,7 +116,6 @@ void list_routine(struct ConfigData *config_data)
 
 void put_routine(char *filename, struct ConfigData *config_data)
 {
-    // Local Vars
     int sockfd[4], ifile_size;
     char msgheader[MAX_MSG_LEN];
     char header_format[] = "put %s %d\n";
@@ -181,7 +177,6 @@ void put_routine(char *filename, struct ConfigData *config_data)
 
 void get_routine(char* filename, struct ConfigData *config_data)
 {
-    // Local Vars
     int sockfd[4];
     char header_format[] = "get %s 0\n";
     char msgheader[MAX_MSG_LEN];
@@ -244,7 +239,6 @@ void get_routine(char* filename, struct ConfigData *config_data)
 
 void recv_files(int sockfd[], char *filename, int server_pair[])
 {
-    // Local Vars
     char getf_format[] = "%d\n";
     char getf_msg[MAX_MSG_LEN];
     char get_msg[MAX_MSG_LEN];
@@ -470,7 +464,6 @@ void config_parse(struct ConfigData* config_data)
     int serv_ctr = 0;
     while (fgets(conf_line, MAX_BUF_LEN, config_file))
     {
-        // Local Vars
         char* line_type;
 
         // Don't parse comments
